@@ -91,7 +91,7 @@ WSGI_APPLICATION = 'aeronaves_service.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': (BASE_DIR.parent.parent / 'etl-aeronaves' / 'aeronaves.db').resolve(),
+        'NAME': (BASE_DIR.parent / 'aeronaves.db').resolve(),
     }
 }
 
