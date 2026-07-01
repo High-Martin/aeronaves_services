@@ -1,0 +1,6 @@
+# Serviços de aeronaves
+
+para rodar basta ter o docker instalado e rodar o comando:
+```
+docker-compose up -d
+```
