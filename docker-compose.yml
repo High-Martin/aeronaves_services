@@ -1,0 +1,59 @@
+services:
+  bus_service:
+    build:
+      context: ./bus_service
+      # Usa a rede do host durante o build: neste ambiente a rede padrão do
+      # buildkit não resolve DNS para o pypi.org, causando timeout no pip.
+      network: host
+    container_name: bus_service
+    ports:
+      - "8001:8000"
+    environment:
+      # Aliases de rede com hífen: o Django rejeita hostnames com underscore
+      # (DisallowedHost), então os upstreams têm aliases sem "_" (ver abaixo).
+      - AERONAVES_SERVICE_URL=http://aeronaves-service:8000
+      - DETALHE_SERVICE_URL=http://detalhe-aeronave-service:8000
+    volumes:
+      # Hot-reload do código do gateway no host (opcional, igual aos outros serviços)
+      - ./bus_service:/app
+    depends_on:
+      - aeronaves_service
+      - detalhe_aeronave_service
+
+  aeronaves_service:
+    build: ./aeronaves_service
+    container_name: aeronaves_service
+    ports:
+      - "8002:8000"
+    environment:
+      - DJANGO_ALLOWED_HOSTS=*
+    volumes:
+      # Código-fonte montado para hot-reload: edições no host chegam ao
+      # container e o runserver (StatReloader) recarrega automaticamente.
+      - ./aeronaves_service:/app
+      # Banco de dados SQLite compartilhado entre os dois serviços.
+      # Dentro do container BASE_DIR=/app, logo BASE_DIR.parent/aeronaves.db -> /aeronaves.db
+      - ./aeronaves.db:/aeronaves.db
+    networks:
+      default:
+        # Alias sem underscore para o BUS conseguir falar com este serviço
+        # sem ser barrado pelo ALLOWED_HOSTS do Django.
+        aliases:
+          - aeronaves-service
+
+  detalhe_aeronave_service:
+    build: ./detalhe_aeronave_service
+    container_name: detalhe_aeronave_service
+    ports:
+      - "8003:8000"
+    environment:
+      - DJANGO_ALLOWED_HOSTS=*
+    volumes:
+      - ./detalhe_aeronave_service:/app
+      - ./aeronaves.db:/aeronaves.db
+    networks:
+      default:
+        aliases:
+          - detalhe-aeronave-service
+    depends_on:
+      - aeronaves_service

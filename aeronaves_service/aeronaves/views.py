@@ -6,22 +6,24 @@ from rest_framework.views import APIView
 
 from .filters import AeronaveFilter, _normalize
 from .models import Aeronave
-from .serializers import MatriculaSerializer
+from .serializers import MatriculaSerializer, TipoVeiculoSerializer
 
 
 class ApiRootView(APIView):
     """Lista os endpoints disponíveis na API."""
 
     def get(self, request, format=None):
-        return Response({
-            'matriculas': reverse('matriculas', request=request, format=format),
-            'filtros': reverse('filtros', request=request, format=format),
-        })
+        return Response(
+            {
+                "matriculas": reverse("matriculas", request=request, format=format),
+                "filtros": reverse("filtros", request=request, format=format),
+            }
+        )
 
 
 class MatriculasPagination(PageNumberPagination):
     page_size = 100
-    page_size_query_param = 'pageSize'
+    page_size_query_param = "pageSize"
     max_page_size = 500
 
 
@@ -33,7 +35,9 @@ class MatriculasView(ListAPIView):
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
-        return queryset.values('matricula', 'fabricante').distinct().order_by('matricula')
+        return (
+            queryset.values("matricula", "fabricante").distinct().order_by("matricula")
+        )
 
 
 class FiltrosView(APIView):
@@ -43,24 +47,13 @@ class FiltrosView(APIView):
         tipos_veiculo = sorted(
             {
                 v.strip()
-                for v in Aeronave.objects.values_list('tipo_veiculo', flat=True).distinct()
+                for v in Aeronave.objects.values_list(
+                    "tipo_veiculo", flat=True
+                ).distinct()
                 if v and v.strip()
             },
             key=_normalize,
         )
 
-        filtros = [
-            {
-                'nome': 'tipoVeiculo',
-                'label': 'Tipo de Veículo',
-                'tipo': 'select',
-                'opcoes': tipos_veiculo,
-            },
-            {
-                'nome': 'search',
-                'label': 'Busca',
-                'tipo': 'text',
-                'opcoes': None,
-            },
-        ]
-        return Response({'filtros': filtros})
+        serializer = TipoVeiculoSerializer(tipos_veiculo, many=True)
+        return Response({"tiposAeronaves": serializer.data})
